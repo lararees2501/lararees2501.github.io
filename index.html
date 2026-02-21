@@ -15,11 +15,66 @@
 <body>
   <div class="box">
     <h1>🐾 Found my cat?</h1>
-    <p>Please message me on Telegram and I’ll reply ASAP.</p>
+    <div style="margin-top:16px;">
+  <h3>Contact</h3>
 
-    <p><b>Telegram:</b> <a href="https://t.me/lara2599
-                        ">lara2599</a></p>
+  <p>
+    <a href="tel:07XXXXXXXXX">Call</a>
+    &nbsp;|&nbsp;
+    <a href="sms:07XXXXXXXXX">Text</a>
+    &nbsp;|&nbsp;
+    <a href="https://wa.me/44XXXXXXXXXX">WhatsApp</a>
+  </p>
 
+  <button id="waBtn">Send my location on WhatsApp</button>
+  <button id="smsBtn">Send my location by text</button>
+
+  <p style="font-size:14px;">
+    Tap a button, allow location, then press Send.
+    If it doesn’t work, please send a map pin / nearest address.
+  </p>
+</div>
+
+<script>
+  const whatsappNumber = "07956155308"; // international format, no +
+  const smsNumber = "07956155308";       // UK mobile
+
+  function getCoords() {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve(pos.coords),
+        (err) => reject(err),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    });
+  }
+
+  function mapLink(lat, lon) {
+    return ⁠ https://maps.google.com/?q=${lat},${lon} ⁠;
+  }
+
+  document.getElementById("waBtn").addEventListener("click", async () => {
+    try {
+      const c = await getCoords();
+      const link = mapLink(c.latitude, c.longitude);
+      const text = encodeURIComponent(⁠ Hi! I found your cat. My location is: ${link} ⁠);
+      window.location.href = ⁠ https://wa.me/${whatsappNumber}?text=${text} ⁠;
+    } catch {
+      alert("Couldn’t get location. Please send a map pin manually.");
+    }
+  });
+
+  document.getElementById("smsBtn").addEventListener("click", async () => {
+    try {
+      const c = await getCoords();
+      const link = mapLink(c.latitude, c.longitude);
+      const msg = encodeURIComponent(⁠ Hi! I found your cat. My location is: ${link} ⁠);
+      window.location.href = ⁠ sms:${smsNumber}?body=${msg} ⁠;
+    } catch {
+      alert("Couldn’t get location. Please send a map pin manually.");
+    }
+  });
+</script>
     <p><b>What to do:</b><br>
       • If safe, keep my cat indoors<br>
       • Send me your location / a photo<br>
