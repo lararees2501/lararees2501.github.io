@@ -5,11 +5,22 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Found my cat?</title>
   <style>
-    body{font-family:system-ui,-apple-system,Arial;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.4}
-    .box{border:1px solid #ddd;border-radius:14px;padding:16px}
+    body{
+      font-family:system-ui,-apple-system,Arial;
+      max-width:720px;
+      margin:40px auto;
+      padding:0 16px;
+      line-height:1.4
+    }
+    .box{
+      border:1px solid #ddd;
+      border-radius:14px;
+      padding:16px
+    }
     h1{margin:0 0 10px}
+    a{color:#0b57d0}
+    small{color:#555}
 
-    /* Make sure buttons are actually tappable */
     button{pointer-events:auto;touch-action:manipulation;-webkit-appearance:none;appearance:none}
     .btn{
       display:block;
@@ -22,11 +33,13 @@
       background:#fff;
       cursor:pointer;
       font-size:16px;
+      text-align:center;
     }
 
-    small{color:#555}
-    a{color:#0b57d0}
     .status{margin-top:10px;font-size:14px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;word-break:break-all}
+    .hint{font-size:14px;margin-top:10px}
+    .warn{font-size:14px;color:#b00020;margin-top:8px}
   </style>
 </head>
 
@@ -43,14 +56,20 @@
       <a href="https://wa.me/447956155308">WhatsApp</a>
     </p>
 
-    <button class="btn" id="waBtn" type="button">Send my location on WhatsApp</button>
-    <button class="btn" id="smsBtn" type="button">Send my location by text</button>
+    <button class="btn" id="shareBtn" type="button">Share my location</button>
+    <button class="btn" id="copyBtn" type="button" style="display:none;">Copy map link</button>
 
     <div id="status" class="status"></div>
+    <div id="linkBox" class="mono"></div>
 
-    <p style="font-size:14px;">
-      Tap a button, allow location, then press Send.
-      If it doesn’t work, please text/WhatsApp a map pin or nearest street/shop name.
+    <p class="hint">
+      Tap “Share my location”, allow location, then choose WhatsApp or Messages.<br>
+      If it doesn’t work, please send a map pin or nearest street/shop name.
+    </p>
+
+    <p class="warn">
+      If you’re viewing this inside WhatsApp/Instagram and location won’t work,
+      open in Safari (share/menu → “Open in Safari”) or tap “Reduce Protections”.
     </p>
 
     <p><b>What to do:</b><br>
@@ -64,44 +83,67 @@
   </div>
 
   <script>
-    const whatsappNumber = "447956155308";
-    const smsNumber = "07956155308";
     const statusEl = document.getElementById("status");
+    const linkBox = document.getElementById("linkBox");
+    const copyBtn = document.getElementById("copyBtn");
 
-    function setStatus(msg){ statusEl.textContent = msg; }
+    function setStatus(t){ statusEl.textContent = t; }
     function mapLink(lat, lon){ return ⁠ https://maps.google.com/?q=${lat},${lon} ⁠; }
 
-    function getCoords() {
+    function getLocationLink(){
       return new Promise((resolve, reject) => {
         if (!navigator.geolocation) return reject(new Error("Geolocation not supported"));
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy:true, timeout:20000, maximumAge:0 });
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            resolve(mapLink(lat, lon));
+          },
+          (err) => reject(err),
+          { enableHighAccuracy:true, timeout:20000, maximumAge:0 }
+        );
       });
     }
 
-    async function send(kind) {
-      try {
+    async function shareLocation(){
+      try{
         setStatus("Requesting location… tap Allow");
-        const pos = await getCoords();
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        const link = mapLink(lat, lon);
-        const text = encodeURIComponent(⁠ Hi! I found your cat. My exact location is: ${link} ⁠);
+        linkBox.textContent = "";
+        copyBtn.style.display = "none";
 
-        setStatus("Got location ✅ Opening app…");
+        const link = await getLocationLink();
+        const text = ⁠ Hi! I found your cat. My exact location is: ${link} ⁠;
 
-        if (kind === "wa") {
-          window.location.href = ⁠ https://wa.me/${whatsappNumber}?text=${text} ⁠;
+        setStatus("Location captured ✅");
+        linkBox.innerHTML = ⁠ Map link: <a href="${link}" target="_blank" rel="noopener">${link}</a> ⁠;
+        copyBtn.style.display = "block";
+
+        // iPhone-friendly: Share sheet (WhatsApp / Messages / etc.)
+        if (navigator.share){
+          await navigator.share({ text, url: link });
+          setStatus("Shared ✅ (If nothing sent, choose WhatsApp or Messages)");
         } else {
-          window.location.href = ⁠ sms:${smsNumber}?body=${text} ⁠;
+          setStatus("Tap “Copy map link”, then paste into Text/WhatsApp.");
         }
-      } catch (e) {
-        setStatus("Couldn’t get location. Please send a map pin / nearest address.");
-        alert("Couldn’t get location. Please send a map pin / nearest address by text or WhatsApp.");
+      } catch(e){
+        setStatus("Location blocked. Open in Safari and allow location, or send nearest street/shop name.");
+        alert("Location blocked. Open in Safari and allow location, or send a map pin / nearest address.");
       }
     }
 
-    document.getElementById("waBtn").addEventListener("click", () => send("wa"));
-    document.getElementById("smsBtn").addEventListener("click", () => send("sms"));
+    async function copyLink(){
+      const a = linkBox.querySelector("a");
+      if (!a) return;
+      try{
+        await navigator.clipboard.writeText(a.href);
+        setStatus("Copied ✅ Now paste into Text/WhatsApp.");
+      } catch(e){
+        setStatus("Press and hold the map link to copy it.");
+      }
+    }
+
+    document.getElementById("shareBtn").addEventListener("click", shareLocation);
+    copyBtn.addEventListener("click", copyLink);
   </script>
 </body>
 </html>
