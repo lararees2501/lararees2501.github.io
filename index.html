@@ -8,10 +8,11 @@
     body{font-family:system-ui,-apple-system,Arial;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.4}
     .box{border:1px solid #ddd;border-radius:14px;padding:16px}
     h1{margin:0 0 10px}
-    .btn{display:inline-block;margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid #111;text-decoration:none;background:#fff;cursor:pointer}
+    .btn{display:inline-block;margin-top:10px;margin-right:10px;padding:12px 14px;border-radius:12px;border:1px solid #111;background:#fff;cursor:pointer}
     small{color:#555}
-    .contact a{display:inline-block;margin-right:10px}
     .status{margin-top:10px;font-size:14px;color:#333}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;word-break:break-all}
+    a{color:#0b57d0}
   </style>
 </head>
 
@@ -19,27 +20,25 @@
   <div class="box">
     <h1>🐾 Found my cat?</h1>
 
-    <div class="contact" style="margin-top:16px;">
-      <h3>Contact</h3>
+    <h3>Contact</h3>
+    <p>
+      <a href="tel:07956155308">Call</a>
+      &nbsp;|&nbsp;
+      <a href="sms:07956155308">Text</a>
+      &nbsp;|&nbsp;
+      <a href="https://wa.me/447956155308">WhatsApp</a>
+    </p>
 
-      <p>
-        <a href="tel:07956155308">Call</a>
-        &nbsp;|&nbsp;
-        <a href="sms:07956155308">Text</a>
-        &nbsp;|&nbsp;
-        <a href="https://wa.me/447956155308">WhatsApp</a>
-      </p>
+    <button class="btn" id="waBtn">Send my location on WhatsApp</button>
+    <button class="btn" id="smsBtn">Send my location by text</button>
 
-      <button class="btn" id="waBtn">Send my location on WhatsApp</button>
-      <button class="btn" id="smsBtn">Send my location by text</button>
+    <div id="locStatus" class="status"></div>
+    <div id="locLink" class="mono"></div>
 
-      <div id="locStatus" class="status"></div>
-
-      <p style="font-size:14px;margin-top:10px;">
-        Tap a button, allow location, then press Send.<br>
-        If it doesn’t work, please text/WhatsApp a map pin or the nearest street/shop name.
-      </p>
-    </div>
+    <p style="font-size:14px;margin-top:10px;">
+      Tap a button, allow location, then press Send.<br>
+      If it doesn’t work, please text/WhatsApp a map pin or nearest street/shop name.
+    </p>
 
     <p><b>What to do:</b><br>
       • If safe, keep my cat indoors<br>
@@ -52,58 +51,71 @@
   </div>
 
   <script>
-    // IMPORTANT: WhatsApp needs international digits only. UK 079.. becomes 4479..
-    const whatsappNumber = "447956155308";
+    const whatsappNumber = "447956155308"; // digits only
     const smsNumber = "07956155308";
 
     const statusEl = document.getElementById("locStatus");
+    const linkEl = document.getElementById("locLink");
 
-    function setStatus(msg) {
-      if (statusEl) statusEl.textContent = msg;
+    function setStatus(msg) { statusEl.textContent = msg; }
+    function showLink(url) {
+      linkEl.innerHTML = ⁠ Map link (copy if needed): <br><a href="${url}" target="_blank" rel="noopener">${url}</a> ⁠;
     }
 
-    function getCoords() {
-      return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) return reject(new Error("Geolocation not supported"));
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve(pos.coords),
-          (err) => reject(err),
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-        );
-      });
+    function isIPhone() {
+      return /iPhone|iPad|iPod/i.test(navigator.userAgent);
     }
 
     function mapLink(lat, lon) {
       return ⁠ https://maps.google.com/?q=${lat},${lon} ⁠;
     }
 
-    document.getElementById("waBtn").addEventListener("click", async () => {
-      try {
-        setStatus("Requesting location… (tap Allow)");
-        const c = await getCoords();
-        const link = mapLink(c.latitude, c.longitude);
-        setStatus("Got location. Opening WhatsApp…");
-        const text = encodeURIComponent(⁠ Hi! I found your cat. My exact location is: ${link} ⁠);
-        window.location.href = ⁠ https://wa.me/${whatsappNumber}?text=${text} ⁠;
-      } catch (e) {
-        setStatus("Couldn’t get location. Please send a map pin / nearest address.");
-        alert("Couldn’t get location. Please send a map pin / nearest address by text or WhatsApp.");
-      }
-    });
+    function getLocationOnce() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error("Geolocation not supported"));
 
-    document.getElementById("smsBtn").addEventListener("click", async () => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve(pos.coords),
+          (err) => reject(err),
+          { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+        );
+      });
+    }
+
+    async function handleShare(openKind) {
+      setStatus("Requesting location permission… (tap Allow)");
+      linkEl.textContent = "";
+
       try {
-        setStatus("Requesting location… (tap Allow)");
-        const c = await getCoords();
-        const link = mapLink(c.latitude, c.longitude);
-        setStatus("Got location. Opening Text message…");
-        const msg = encodeURIComponent(⁠ Hi! I found your cat. My exact location is: ${link} ⁠);
-        window.location.href = ⁠ sms:${smsNumber}?body=${msg} ⁠;
+        const c = await getLocationOnce();
+        const url = mapLink(c.latitude, c.longitude);
+        showLink(url);
+
+        const message = ⁠ Hi! I found your cat. My exact location is: ${url} ⁠;
+        const encoded = encodeURIComponent(message);
+
+        setStatus("Location captured ✅ Opening your app…");
+
+        if (openKind === "wa") {
+          window.location.href = ⁠ https://wa.me/${whatsappNumber}?text=${encoded} ⁠;
+          return;
+        }
+
+        // SMS: iPhone often needs &body= instead of ?body=
+        if (isIPhone()) {
+          window.location.href = ⁠ sms:${smsNumber}&body=${encoded} ⁠;
+        } else {
+          window.location.href = ⁠ sms:${smsNumber}?body=${encoded} ⁠;
+        }
       } catch (e) {
+        // Show more helpful error
         setStatus("Couldn’t get location. Please send a map pin / nearest address.");
-        alert("Couldn’t get location. Please send a map pin / nearest address by text or WhatsApp.");
+        alert("Couldn’t get location. Please allow location permissions, or send a map pin / nearest address by text/WhatsApp.");
       }
-    });
+    }
+
+    document.getElementById("waBtn").addEventListener("click", () => handleShare("wa"));
+    document.getElementById("smsBtn").addEventListener("click", () => handleShare("sms"));
   </script>
 </body>
 </html>
