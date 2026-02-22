@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -6,17 +6,8 @@
 <title>Found my cat?</title>
 
 <style>
-body{
-  font-family:system-ui;
-  max-width:700px;
-  margin:40px auto;
-  padding:16px;
-}
-.box{
-  border:1px solid #ddd;
-  border-radius:14px;
-  padding:16px;
-}
+body{font-family:system-ui;max-width:700px;margin:40px auto;padding:16px;line-height:1.4}
+.box{border:1px solid #ddd;border-radius:14px;padding:16px}
 button{
   padding:14px;
   margin-top:12px;
@@ -26,73 +17,67 @@ button{
   background:white;
   font-size:16px;
 }
+small{color:#555}
+a{color:#0b57d0}
 </style>
 </head>
 
 <body>
-
 <div class="box">
-<h1>🐾 Found my cat?</h1>
+  <h1>🐾 Found my cat?</h1>
 
-<p>
-<a href="tel:07956155308">Call</a> |
-<a href="sms:07956155308">Text</a> |
-<a href="https://wa.me/447956155308">WhatsApp</a>
-</p>
+  <p>
+    <a href="tel:07956155308">Call</a> |
+    <a href="sms:07956155308">Text</a> |
+    <a href="https://wa.me/447956155308">WhatsApp</a>
+  </p>
 
-<button onclick="shareLocation()">Share my location</button>
+  <button type="button" onclick="sendWhatsAppLocation()">Send my location on WhatsApp</button>
 
-<p id="status"></p>
+  <p id="status"></p>
 
-<p>
-If safe, please keep my cat indoors and send your location.
-</p>
+  <p><b>What to do:</b><br>
+    • If safe, keep my cat indoors<br>
+    • Send me your location / a photo<br>
+    • I’ll come collect her<br>
+    • My phone number: <a href="tel:07956155308">07956 155308</a>
+  </p>
 
+  <small>Thank you so much ❤️</small>
 </div>
 
 <script>
-
-function shareLocation(){
-
+function sendWhatsAppLocation(){
   var status = document.getElementById("status");
-  status.innerText = "Requesting location...";
+  status.innerText = "Requesting location… (tap Allow)";
 
   if(!navigator.geolocation){
-    status.innerText = "Location not supported.";
+    status.innerText = "Location not supported. Please WhatsApp/text a map pin.";
     return;
   }
 
   navigator.geolocation.getCurrentPosition(
     function(pos){
-
       var lat = pos.coords.latitude;
       var lon = pos.coords.longitude;
+      var link = "https://maps.google.com/?q=" + lat + "," + lon;
 
-      var link =
-        "https://maps.google.com/?q=" + lat + "," + lon;
+      status.innerText = "Opening WhatsApp…";
 
-      status.innerText =
-        "Location ready ✔ Opening share menu...";
+      // WhatsApp number must be international digits only (UK 079.. -> 4479..)
+      var phone = "447956155308";
+      var msg = encodeURIComponent("Hi! I found your cat. My exact location is: " + link);
 
-      if(navigator.share){
-        navigator.share({
-          text:"Hi! I found your cat. My location:",
-          url:link
-        });
-      }else{
-        status.innerText =
-          "Copy this link and send it:";
-        status.innerText += " " + link;
-      }
+      // This opens WhatsApp (or WhatsApp Web) with message filled in
+      window.location.href = "https://wa.me/" + phone + "?text=" + msg;
     },
-
     function(){
-      status.innerText =
-        "Location blocked. Please allow location.";
-    }
+      status.innerText = "Location blocked. Please allow location, or send a map pin / nearest street.";
+      alert("Please allow location, or send a map pin / nearest street/shop name via WhatsApp/text.");
+    },
+    { enableHighAccuracy:true, timeout:20000, maximumAge:0 }
   );
 }
-
 </script>
 
 </body>
